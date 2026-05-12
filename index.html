@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>売上実績表</title>
+<style>
+:root {
+  --primary: #1a1a2e;
+  --primary-light: #2c3e6b;
+  --accent: #e74c3c;
+  --green: #27ae60;
+  --bg: #f0f2f5;
+  --white: #fff;
+  --border: #e0e0e0;
+  --text: #333;
+  --text-light: #666;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI','Yu Gothic UI','Meiryo',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ===== Header ===== */
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: var(--white);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+}
+.header h1 { font-size: 20px; letter-spacing: 1px; white-space: nowrap; }
+.month-nav { display: flex; align-items: center; gap: 10px; }
+.month-nav button {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--white);
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.month-nav button:hover { background: rgba(255,255,255,0.25); }
+.month-nav .current-date { font-size: 18px; font-weight: 500; min-width: 140px; text-align: center; }
+
+/* ===== Tabs ===== */
+.tabs {
+  background: var(--white);
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  padding: 0 12px;
+  overflow-x: auto;
+  position: sticky;
+  top: 62px;
+  z-index: 99;
+}
+.tab {
+  padding: 12px 18px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-light);
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+  user-select: none;
+}
+.tab:hover { color: var(--primary); background: #f8f9fa; }
+.tab.active { color: var(--primary); border-bottom-color: var(--accent); font-weight: 700; }
+
+/* ===== Content ===== */
+.content { padding: 16px 20px 40px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ===== Tables ===== */
+.table-wrap { overflow-x: auto; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 20px; }
+table { width: 100%; border-collapse: collapse; background: var(--white); font-size: 12px; }
+th {
+  background: var(--primary);
+  color: var(--white);
+  padding: 9px 6px;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+th.sub { background: var(--primary-light); font-size: 11px; }
+td { padding: 6px 5px; text-align: right; border-bottom: 1px solid #eee; white-space: nowrap; }
+td.center { text-align: center; }
+td.left { text-align: left; padding-left: 12px; }
+tr:hover td { background: #f8f9fa; }
+tr.sun td { background: #fff0f0; }
+tr.sat td { background: #f0f4ff; }
+tr.total td { background: #e8eaf6; font-weight: 700; border-top: 2px solid var(--primary); }
+td.hi { color: var(--green); font-weight: 600; }
+td.lo { color: var(--accent); font-weight: 600; }
+td.bold { font-weight: 700; }
+
+/* ===== Inputs ===== */
+input, select {
+  padding: 5px 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #fafbfc;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus { outline: none; border-color: var(--primary-light); background: var(--white); }
+input[type="number"], .yen { text-align: right; width: 100%; }
+input.yen { text-align: right; min-width: 80px; }
+td.yen-cell { min-width: 80px; }
+input[type="text"] { text-align: left; }
+input[type="date"] { width: 130px; }
+input[type="time"] { width: 90px; }
+select { text-align: left; }
+
+/* ===== Buttons ===== */
+.toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.btn-p { background: var(--primary); color: var(--white); }
+.btn-p:hover { background: var(--primary-light); }
+.btn-g { background: var(--green); color: var(--white); }
+.btn-g:hover { opacity: 0.9; }
+.btn-d { background: var(--accent); color: var(--white); }
+.btn-d:hover { opacity: 0.9; }
+.btn-o { background: var(--white); color: var(--primary); border: 1px solid var(--primary); }
+.btn-o:hover { background: var(--primary); color: var(--white); }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* ===== Section ===== */
+.sec-title {
+  font-size: 15px; font-weight: 700; margin: 22px 0 10px;
+  padding-left: 12px; border-left: 4px solid var(--accent); color: var(--primary);
+}
+.sec-title:first-child { margin-top: 0; }
+
+/* ===== Staff grid ===== */
+.staff-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 10px; }
+.staff-card {
+  background: var(--white); border-radius: 8px; padding: 14px 16px;
+  box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between;
+}
+.staff-card .name { font-weight: 600; font-size: 15px; }
+.staff-card .acts { display: flex; gap: 6px; }
+
+/* ===== CSV ===== */
+.csv-list { display: flex; flex-direction: column; gap: 10px; max-width: 380px; }
+
+.empty { text-align: center; padding: 36px; color: #aaa; font-size: 13px; }
+
+/* ===== Responsive ===== */
+@media(max-width:768px) {
+  .header { padding: 10px 12px; gap: 12px; }
+  .header h1 { font-size: 16px; }
+  .content { padding: 10px 8px 30px; }
+  .tab { padding: 10px 12px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>売上実績表</h1>
+  <nav class="month-nav">
+    <button onclick="chgMonth(-1)" aria-label="前月">◀</button>
+    <span class="current-date" id="curDate"></span>
+    <button onclick="chgMonth(1)" aria-label="翌月">▶</button>
+  </nav>
+</header>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" data-t="sales">売上実績表</div>
+  <div class="tab" data-t="visit">来店管理</div>
+  <div class="tab" data-t="aggSales">売上集計</div>
+  <div class="tab" data-t="aggVisit">来店集計</div>
+  <div class="tab" data-t="staff">担当者編集</div>
+  <div class="tab" data-t="csv">CSV出力</div>
+</div>
+
+<main class="content">
+  <!-- ==================== 売上実績表 ==================== -->
+  <section class="tab-panel active" id="p-sales">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2" style="min-width:52px">日付</th>
+            <th rowspan="2" style="min-width:32px">曜日</th>
+            <th colspan="3">売上</th>
+            <th colspan="3">組数</th>
+            <th colspan="3">客数</th>
+            <th colspan="3">客単価</th>
+            <th rowspan="2">現金</th>
+            <th rowspan="2">VISA/<br>MASTER</th>
+            <th rowspan="2">JCB/AMEX/<br>DIN</th>
+            <th rowspan="2">QRコード</th>
+            <th rowspan="2">請求書</th>
+            <th rowspan="2">売掛</th>
+          </tr>
+          <tr>
+            <th class="sub">予算</th><th class="sub">実績</th><th class="sub">達成率</th>
+            <th class="sub">予定</th><th class="sub">実績</th><th class="sub">達成率</th>
+            <th class="sub">予定</th><th class="sub">実績</th><th class="sub">達成率</th>
+            <th class="sub">予定</th><th class="sub">実績</th><th class="sub">達成率</th>
+          </tr>
+        </thead>
+        <tbody id="tb-sales"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== 来店管理 ==================== -->
+  <section class="tab-panel" id="p-visit">
+    <div class="toolbar">
+      <button class="btn btn-p" onclick="addVisit()">＋ 来店追加</button>
+      <button class="btn btn-g" onclick="saveVisits()">保存</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>来店日</th><th>曜日</th><th>時間</th><th>お客様名</th><th>客数</th>
+            <th>売上</th><th>会計</th><th>担当</th><th>同伴C</th>
+            <th>予約R</th><th>ボトルB</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="tb-visit"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== 売上集計 ==================== -->
+  <section class="tab-panel" id="p-aggSales">
+    <div class="sec-title">担当者売上S集計表</div>
+    <div class="table-wrap">
+      <table><thead><tr>
+        <th>担当者名</th><th>組数合計</th><th>客数合計</th><th>売上合計</th>
+        <th>客単価</th><th>日商</th><th>歩合</th><th>支給額</th>
+      </tr></thead><tbody id="tb-agg-staff"></tbody></table>
+    </div>
+    <div class="sec-title">予約R担当者売上集計表</div>
+    <div class="table-wrap">
+      <table><thead><tr>
+        <th>予約者名</th><th>組数合計</th><th>客数合計</th><th>売上合計</th>
+        <th>客単価</th><th>日商</th><th>歩合</th><th>支給額</th>
+      </tr></thead><tbody id="tb-agg-rsv"></tbody></table>
+    </div>
+    <div class="sec-title">同伴C集計表</div>
+    <div class="table-wrap">
+      <table><thead><tr>
+        <th>名前</th><th>回数合計</th><th>売上合計</th>
+        <th>客単価</th><th>日商</th><th>支給額</th>
+      </tr></thead><tbody id="tb-agg-comp"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ==================== 来店集計 ==================== -->
+  <section class="tab-panel" id="p-aggVisit">
+    <div class="sec-title">時間帯 × 曜日 来店集計</div>
+    <div id="aggVisitArea"></div>
+  </section>
+
+  <!-- ==================== 担当者編集 ==================== -->
+  <section class="tab-panel" id="p-staff">
+    <div class="toolbar">
+      <input type="text" id="inpStaff" placeholder="担当者名を入力" style="padding:8px 12px;font-size:14px;width:200px;">
+      <button class="btn btn-p" onclick="addStaff()">＋ 担当者追加</button>
+    </div>
+    <div class="staff-grid" id="staffGrid"></div>
+  </section>
+
+  <!-- ==================== CSV出力 ==================== -->
+  <section class="tab-panel" id="p-csv">
+    <div class="sec-title">CSV出力</div>
+    <div class="csv-list">
+      <button class="btn btn-p" onclick="toCSV('sales')">売上実績表</button>
+      <button class="btn btn-p" onclick="toCSV('visit')">来店管理</button>
+      <button class="btn btn-p" onclick="toCSV('staffAgg')">担当者売上S集計</button>
+      <button class="btn btn-p" onclick="toCSV('rsvAgg')">予約R集計</button>
+      <button class="btn btn-p" onclick="toCSV('compAgg')">同伴C集計</button>
+      <button class="btn btn-p" onclick="toCSV('visitAgg')">来店集計</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ===== Constants ===== */
+const DOW = ['日','月','火','水','木','金','土'];
+const WDAYS = ['月','火','水','木','金','土','日'];
+const SLOTS = ['20:00','21:00','22:00','23:00','0:00','1:00','2:00','3:00'];
+const PAY_TYPES = ['現金','VISA/MASTER','JCB/AMEX/DIN','QRコード','請求書','売掛'];
+const PAY_KEYS = ['cash','visa','jcb','qr','inv','ar'];
+
+/* ===== State ===== */
+let Y, M, sales, visits, staff;
+
+/* ===== Init ===== */
+(function init(){
+  const n = new Date();
+  Y = n.getFullYear(); M = n.getMonth()+1;
+  staff = JSON.parse(localStorage.getItem('s_staff')||'null') || ['ママ','あい','みか'];
+  saveStaff();
+  bindTabs();
+  refresh();
+})();
+
+function sKey(p){ return `s_${p}_${Y}_${M}`; }
+
+function bindTabs(){
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.onclick=()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('p-'+t.dataset.t).classList.add('active');
+      if(t.dataset.t==='aggSales') buildAggSales();
+      if(t.dataset.t==='aggVisit') buildAggVisit();
+    };
+  });
+}
+
+function chgMonth(d){
+  M+=d;
+  if(M>12){M=1;Y++;}
+  if(M<1){M=12;Y--;}
+  refresh();
+}
+
+function refresh(){
+  document.getElementById('curDate').textContent=`${Y}年${M}月`;
+  sales = JSON.parse(localStorage.getItem(sKey('sales'))||'{}');
+  visits = JSON.parse(localStorage.getItem(sKey('visits'))||'[]');
+  renderSales();
+  renderVisits();
+  renderStaff();
+}
+
+function saveSales(){ localStorage.setItem(sKey('sales'),JSON.stringify(sales)); }
+function saveVisitsLS(){ localStorage.setItem(sKey('visits'),JSON.stringify(visits)); }
+function saveStaff(){ localStorage.setItem('s_staff',JSON.stringify(staff)); }
+
+/* ===== Helpers ===== */
+function dim(y,m){ return new Date(y,m,0).getDate(); }
+function dow(y,m,d){ return new Date(y,m-1,d).getDay(); }
+function f(n){ return (n===''||n==null)?'':Number(n).toLocaleString(); }
+function yen(n){ return (n===''||n==null||n===0)?'':'¥'+Number(n).toLocaleString(); }
+function pct(a,b){ return (!b||b==0)?'':((a/b)*100).toFixed(1)+'%'; }
+function pctCls(a,b){ if(!b||b==0)return ''; return (a/b*100>=100)?'hi':'lo'; }
+
+function yenIn(val,day,fld){
+  const r = val||'';
+  const disp = r ? '¥'+Number(r).toLocaleString() : '';
+  return `<input class="yen" type="text" value="${disp}" data-r="${r}" data-d="${day}" data-f="${fld}"
+    onfocus="this.value=this.dataset.r"
+    onblur="yenBlur(this)"
+    onkeydown="if(event.key==='Enter')this.blur()">`;
+}
+
+function yenBlur(el){
+  const v = el.value.replace(/[^0-9]/g,'');
+  const n = v?Number(v):'';
+  el.dataset.r = n;
+  el.value = n ? '¥'+n.toLocaleString() : '';
+  updateSale(Number(el.dataset.d), el.dataset.f, n);
+}
+
+function numIn(val,day,fld){
+  return `<input type="number" style="width:100%" value="${val||''}" onchange="updateSale(${day},'${fld}',this.value?Number(this.value):'')">`;
+}
+
+/* ===== 売上実績表 ===== */
+function updateSale(day,fld,val){
+  const k = String(day);
+  if(!sales[k]) sales[k]={};
+  sales[k][fld]=val;
+  saveSales();
+  renderSales();
+}
+
+function renderSales(){
+  const days = dim(Y,M);
+  let html = '';
+  const T = {budgetS:0,planG:0,actG:0,planC:0,actC:0,cash:0,visa:0,jcb:0,qr:0,inv:0,ar:0};
+
+  for(let d=1;d<=days;d++){
+    const w = dow(Y,M,d);
+    const r = sales[d]||{};
+    const cls = w===0?'sun':w===6?'sat':'';
+    const actS = PAY_KEYS.reduce((s,k)=>s+Number(r[k]||0),0);
+    const actU = (r.actC&&r.actC>0&&actS)?Math.round(actS/r.actC):'';
+    const planU = (r.budgetS&&r.planC&&r.planC>0)?Math.round(Number(r.budgetS)/Number(r.planC)):'';
+
+    T.budgetS+=Number(r.budgetS||0);
+    T.planG+=Number(r.planG||0); T.actG+=Number(r.actG||0);
+    T.planC+=Number(r.planC||0); T.actC+=Number(r.actC||0);
+    PAY_KEYS.forEach(k=> T[k]+=Number(r[k]||0));
+
+    html+=`<tr class="${cls}">
+      <td class="center">${M}/${d}</td>
+      <td class="center">${DOW[w]}</td>
+      <td>${yenIn(r.budgetS,d,'budgetS')}</td>
+      <td class="bold yen-cell">${yen(actS)}</td>
+      <td class="${pctCls(actS,r.budgetS)}">${pct(actS,r.budgetS)}</td>
+      <td>${numIn(r.planG,d,'planG')}</td>
+      <td>${numIn(r.actG,d,'actG')}</td>
+      <td class="${pctCls(r.actG,r.planG)}">${pct(r.actG,r.planG)}</td>
+      <td>${numIn(r.planC,d,'planC')}</td>
+      <td>${numIn(r.actC,d,'actC')}</td>
+      <td class="${pctCls(r.actC,r.planC)}">${pct(r.actC,r.planC)}</td>
+      <td class="yen-cell">${yen(planU)}</td>
+      <td class="yen-cell">${yen(actU)}</td>
+      <td class="${pctCls(actU,planU)}">${pct(actU,planU)}</td>
+      ${PAY_KEYS.map(k=>`<td>${yenIn(r[k],d,k)}</td>`).join('')}
+    </tr>`;
+  }
+
+  const totalS = PAY_KEYS.reduce((s,k)=>s+T[k],0);
+  const totalU = T.actC>0?Math.round(totalS/T.actC):'';
+  html+=`<tr class="total">
+    <td class="center" colspan="2">合計</td>
+    <td>${yen(T.budgetS)}</td>
+    <td class="bold yen-cell">${yen(totalS)}</td>
+    <td class="${pctCls(totalS,T.budgetS)}">${pct(totalS,T.budgetS)}</td>
+    <td>${f(T.planG)}</td><td>${f(T.actG)}</td>
+    <td class="${pctCls(T.actG,T.planG)}">${pct(T.actG,T.planG)}</td>
+    <td>${f(T.planC)}</td><td>${f(T.actC)}</td>
+    <td class="${pctCls(T.actC,T.planC)}">${pct(T.actC,T.planC)}</td>
+    <td>${yen(T.planC>0?Math.round(T.budgetS/T.planC):'')}</td>
+    <td class="yen-cell">${yen(totalU)}</td>
+    <td class="${pctCls(totalU,T.planC>0?Math.round(T.budgetS/T.planC):0)}">${pct(totalU,T.planC>0?Math.round(T.budgetS/T.planC):0)}</td>
+    ${PAY_KEYS.map(k=>`<td>${yen(T[k])}</td>`).join('')}
+  </tr>`;
+
+  document.getElementById('tb-sales').innerHTML = html;
+}
+
+/* ===== 来店管理 ===== */
+function addVisit(){
+  const dd = String(new Date().getDate()).padStart(2,'0');
+  visits.push({date:`${Y}-${String(M).padStart(2,'0')}-${dd}`,time:'20:00',
+    name:'',cnt:1,sales:0,pay:'',staff:staff[0]||'',comp:'',rsv:'',bottle:''});
+  renderVisits();
+}
+
+function saveVisits(){
+  saveVisitsLS();
+  alert('保存しました');
+}
+
+function delVisit(i){ visits.splice(i,1); renderVisits(); }
+
+function updVisit(i,k,v){ visits[i][k] = (k==='cnt'||k==='sales')?Number(v):v; }
+
+function staffOpts(sel){
+  return '<option value="">--</option>'+staff.map(s=>`<option ${s===sel?'selected':''}>${s}</option>`).join('');
+}
+
+function renderVisits(){
+  if(!visits.length){
+    document.getElementById('tb-visit').innerHTML='<tr><td colspan="12" class="empty">データなし — 「＋ 来店追加」で追加</td></tr>';
+    return;
+  }
+  document.getElementById('tb-visit').innerHTML = visits.map((v,i)=>{
+    const dt = new Date(v.date);
+    const w = isNaN(dt)?'':DOW[dt.getDay()];
+    return `<tr>
+      <td><input type="date" value="${v.date}" onchange="updVisit(${i},'date',this.value)"></td>
+      <td class="center">${w}</td>
+      <td><input type="time" value="${v.time}" onchange="updVisit(${i},'time',this.value)"></td>
+      <td><input type="text" value="${v.name}" onchange="updVisit(${i},'name',this.value)" placeholder="お客様名" style="width:100%"></td>
+      <td><input type="number" value="${v.cnt}" onchange="updVisit(${i},'cnt',this.value)" min="1" style="width:50px"></td>
+      <td><input type="number" value="${v.sales}" onchange="updVisit(${i},'sales',this.value)" style="width:90px"></td>
+      <td><select onchange="updVisit(${i},'pay',this.value)"><option value="">--</option>
+        ${PAY_TYPES.map(p=>`<option ${v.pay===p?'selected':''}>${p}</option>`).join('')}</select></td>
+      <td><select onchange="updVisit(${i},'staff',this.value)">${staffOpts(v.staff)}</select></td>
+      <td><select onchange="updVisit(${i},'comp',this.value)">${staffOpts(v.comp)}</select></td>
+      <td><select onchange="updVisit(${i},'rsv',this.value)">${staffOpts(v.rsv)}</select></td>
+      <td><select onchange="updVisit(${i},'bottle',this.value)">${staffOpts(v.bottle)}</select></td>
+      <td><button class="btn btn-d btn-sm" onclick="delVisit(${i})">削除</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ===== 売上集計 ===== */
+function buildAggSales(){
+  const vs = JSON.parse(localStorage.getItem(sKey('visits'))||'[]');
+  const d = dim(Y,M);
+  const sMap={}, rMap={}, cMap={};
+
+  vs.forEach(v=>{
+    const s=Number(v.sales||0), c=Number(v.cnt||0);
+    if(v.staff){
+      if(!sMap[v.staff]) sMap[v.staff]={g:0,c:0,s:0};
+      sMap[v.staff].g++; sMap[v.staff].c+=c; sMap[v.staff].s+=s;
+    }
+    if(v.rsv){
+      if(!rMap[v.rsv]) rMap[v.rsv]={g:0,c:0,s:0};
+      rMap[v.rsv].g++; rMap[v.rsv].c+=c; rMap[v.rsv].s+=s;
+    }
+    if(v.comp){
+      if(!cMap[v.comp]) cMap[v.comp]={n:0,c:0,s:0};
+      cMap[v.comp].n++; cMap[v.comp].c+=c; cMap[v.comp].s+=s;
+    }
+  });
+
+  const aggRow8=(map,rate)=>{
+    let html='', tg=0,tc=0,ts=0;
+    Object.entries(map).forEach(([nm,o])=>{
+      const u=o.c?Math.round(o.s/o.c):0, dy=Math.round(o.s/d), cm=Math.round(o.s*rate);
+      tg+=o.g; tc+=o.c; ts+=o.s;
+      html+=`<tr><td class="left">${nm}</td><td>${f(o.g)}</td><td>${f(o.c)}</td><td>${yen(o.s)}</td>
+        <td>${yen(u)}</td><td>${yen(dy)}</td><td>${yen(cm)}</td><td>${yen(cm)}</td></tr>`;
+    });
+    const tu=tc?Math.round(ts/tc):0;
+    html+=`<tr class="total"><td class="left">合計</td><td>${f(tg)}</td><td>${f(tc)}</td><td>${yen(ts)}</td>
+      <td>${yen(tu)}</td><td>${yen(Math.round(ts/d))}</td><td>${yen(Math.round(ts*rate))}</td><td>${yen(Math.round(ts*rate))}</td></tr>`;
+    return html||'<tr><td colspan="8" class="empty">データなし</td></tr>';
+  };
+
+  document.getElementById('tb-agg-staff').innerHTML = aggRow8(sMap,0.10);
+  document.getElementById('tb-agg-rsv').innerHTML = aggRow8(rMap,0.05);
+
+  let html='', tn=0,tc=0,ts=0;
+  Object.entries(cMap).forEach(([nm,o])=>{
+    const u=o.c?Math.round(o.s/o.c):0, dy=Math.round(o.s/d), pay=o.n*3000;
+    tn+=o.n; tc+=o.c; ts+=o.s;
+    html+=`<tr><td class="left">${nm}</td><td>${f(o.n)}</td><td>${yen(o.s)}</td>
+      <td>${yen(u)}</td><td>${yen(dy)}</td><td>${yen(pay)}</td></tr>`;
+  });
+  const cu=tc?Math.round(ts/tc):0;
+  html+=`<tr class="total"><td class="left">合計</td><td>${f(tn)}</td><td>${yen(ts)}</td>
+    <td>${yen(cu)}</td><td>${yen(Math.round(ts/d))}</td><td>${yen(tn*3000)}</td></tr>`;
+  document.getElementById('tb-agg-comp').innerHTML = html||'<tr><td colspan="6" class="empty">データなし</td></tr>';
+}
+
+/* ===== 来店集計 ===== */
+function buildAggVisit(){
+  const vs = JSON.parse(localStorage.getItem(sKey('visits'))||'[]');
+  const grid={};
+  SLOTS.forEach(t=>{ grid[t]={}; WDAYS.forEach(w=>{ grid[t][w]={g:0,c:0,s:0,ds:new Set()}; }); });
+
+  vs.forEach(v=>{
+    if(!v.date||!v.time) return;
+    const dt=new Date(v.date); if(isNaN(dt)) return;
+    const w=DOW[dt.getDay()]; if(!WDAYS.includes(w)) return;
+    const h=parseInt(v.time.split(':')[0]);
+    const slot=SLOTS.find(t=>parseInt(t)===h);
+    if(!slot) return;
+    const cell=grid[slot][w];
+    cell.g++; cell.c+=Number(v.cnt||0); cell.s+=Number(v.sales||0); cell.ds.add(v.date);
+  });
+
+  const metrics = [
+    {label:'組数合計',fn:c=>c.g},
+    {label:'客数合計',fn:c=>c.c},
+    {label:'売上合計',fn:c=>c.s,isCur:true},
+    {label:'客単価',fn:c=>c.c?Math.round(c.s/c.c):0,isCur:true},
+    {label:'平均組数',fn:c=>{const d=c.ds.size||1;return (c.g/d).toFixed(1);},isDec:true},
+    {label:'平均客数',fn:c=>{const d=c.ds.size||1;return (c.c/d).toFixed(1);},isDec:true}
+  ];
+
+  let out='';
+  metrics.forEach(m=>{
+    out+=`<div class="sec-title" style="margin-top:18px">${m.label}</div><div class="table-wrap"><table><thead><tr><th>時間帯</th>`;
+    WDAYS.forEach(w=>out+=`<th>${w}</th>`);
+    out+=`<th>合計</th></tr></thead><tbody>`;
+    SLOTS.forEach(t=>{
+      out+=`<tr><td class="center" style="font-weight:600">${t}</td>`;
+      let rowT=0;
+      WDAYS.forEach(w=>{
+        const c=grid[t][w]; let v=m.fn(c);
+        rowT+=Number(v);
+        const disp = v==0?'-': m.isCur?yen(v): m.isDec?v: f(v);
+        out+=`<td>${disp}</td>`;
+      });
+      out+=`<td style="font-weight:600">${m.isCur?yen(Math.round(rowT)):f(Math.round(rowT))}</td></tr>`;
+    });
+    out+=`</tbody></table></div>`;
+  });
+  document.getElementById('aggVisitArea').innerHTML = out;
+}
+
+/* ===== 担当者編集 ===== */
+function renderStaff(){
+  if(!staff.length){document.getElementById('staffGrid').innerHTML='<div class="empty">担当者未登録</div>';return;}
+  document.getElementById('staffGrid').innerHTML = staff.map((s,i)=>`
+    <div class="staff-card"><span class="name">${s}</span>
+      <div class="acts">
+        <button class="btn btn-o btn-sm" onclick="editStaff(${i})">編集</button>
+        <button class="btn btn-d btn-sm" onclick="rmStaff(${i})">削除</button>
+      </div></div>`).join('');
+}
+
+function addStaff(){
+  const inp=document.getElementById('inpStaff');
+  const nm=inp.value.trim(); if(!nm)return;
+  if(staff.includes(nm)){alert('同名の担当者が既に存在します');return;}
+  staff.push(nm); saveStaff(); renderStaff(); inp.value='';
+}
+
+function editStaff(i){
+  const nm=prompt('新しい名前:',staff[i]);
+  if(nm&&nm.trim()){staff[i]=nm.trim();saveStaff();renderStaff();}
+}
+
+function rmStaff(i){
+  if(confirm(`「${staff[i]}」を削除しますか？`)){staff.splice(i,1);saveStaff();renderStaff();}
+}
+
+/* ===== CSV出力 ===== */
+function toCSV(type){
+  const rows=[];
+  if(type==='sales'){
+    rows.push(['日付','曜日','売上予算','売上実績','達成率','組数予定','組数実績','達成率','客数予定','客数実績','達成率','客単価予定','客単価実績','客単価達成率','現金','VISA/MASTER','JCB/AMEX/DIN','QRコード','請求書','売掛']);
+    for(let d=1;d<=dim(Y,M);d++){
+      const r=sales[d]||{};
+      const actS=PAY_KEYS.reduce((s,k)=>s+Number(r[k]||0),0);
+      const u=r.actC&&r.actC>0?Math.round(actS/r.actC):'';
+      const pu=(r.budgetS&&r.planC&&r.planC>0)?Math.round(Number(r.budgetS)/Number(r.planC)):'';
+      rows.push([`${M}/${d}`,DOW[dow(Y,M,d)],r.budgetS||'',actS||'',pct(actS,r.budgetS),
+        r.planG||'',r.actG||'',pct(r.actG,r.planG),r.planC||'',r.actC||'',pct(r.actC,r.planC),
+        pu,u,pct(u,pu),...PAY_KEYS.map(k=>r[k]||'')]);
+    }
+  } else if(type==='visit'){
+    rows.push(['来店日時','曜日','お客様名','客数','売上','会計','担当','同伴C','予約R','ボトルB']);
+    visits.forEach(v=>{
+      const dt=new Date(v.date); const w=isNaN(dt)?'':DOW[dt.getDay()];
+      rows.push([`${v.date} ${v.time}`,w,v.name,v.cnt,v.sales,v.pay,v.staff,v.comp,v.rsv,v.bottle]);
+    });
+  } else {
+    const tgt = type==='staffAgg'?'tb-agg-staff':type==='rsvAgg'?'tb-agg-rsv':type==='compAgg'?'tb-agg-comp':null;
+    if(tgt){
+      const tb=document.getElementById(tgt);
+      if(!tb||!tb.rows.length){alert('先に売上集計タブを開いてください');return;}
+      tb.querySelectorAll('tr').forEach(tr=>{
+        const c=[]; tr.querySelectorAll('td').forEach(td=>c.push(td.textContent.trim()));
+        if(c.length)rows.push(c);
+      });
+    }
+    if(type==='visitAgg'){
+      const area=document.getElementById('aggVisitArea');
+      if(!area.innerHTML){alert('先に来店集計タブを開いてください');return;}
+      area.querySelectorAll('.sec-title').forEach(st=>{
+        rows.push([]);rows.push([st.textContent]);
+        const tbl=st.nextElementSibling?.querySelector('table');
+        if(tbl)tbl.querySelectorAll('tr').forEach(tr=>{
+          const c=[]; tr.querySelectorAll('th,td').forEach(td=>c.push(td.textContent.trim()));
+          rows.push(c);
+        });
+      });
+    }
+  }
+  const bom='﻿';
+  const csv=bom+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${type}_${Y}${String(M).padStart(2,'0')}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>
