@@ -80,8 +80,8 @@ body { font-family: 'Segoe UI','Yu Gothic UI','Meiryo',sans-serif; background: v
 .tab-panel.active { display: block; }
 
 /* ===== Tables ===== */
-.table-wrap { overflow-x: auto; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 20px; }
-table { width: 100%; border-collapse: collapse; background: var(--white); font-size: 12px; }
+.table-wrap { overflow-x: auto; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 20px; max-height: 80vh; overflow-y: auto; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--white); font-size: 12px; }
 th {
   background: var(--primary);
   color: var(--white);
@@ -91,8 +91,9 @@ th {
   white-space: nowrap;
   position: sticky;
   top: 0;
+  z-index: 3;
 }
-th.sub { background: var(--primary-light); font-size: 11px; }
+th.sub { background: var(--primary-light); font-size: 11px; top: 35px; }
 td { padding: 6px 5px; text-align: right; border-bottom: 1px solid #eee; white-space: nowrap; }
 td.center { text-align: center; }
 td.left { text-align: left; padding-left: 12px; }
@@ -103,6 +104,19 @@ tr.total td { background: #e8eaf6; font-weight: 700; border-top: 2px solid var(-
 td.hi { color: var(--green); font-weight: 600; }
 td.lo { color: var(--accent); font-weight: 600; }
 td.bold { font-weight: 700; }
+
+/* Freeze date & day columns */
+.freeze-col { position: sticky; z-index: 2; background: inherit; }
+.freeze-col:nth-child(1) { left: 0; min-width: 52px; }
+.freeze-col:nth-child(2) { left: 52px; min-width: 32px; }
+th.freeze-col { z-index: 5; }
+th.freeze-col:nth-child(1) { left: 0; }
+th.freeze-col:nth-child(2) { left: 52px; }
+tr.sun td.freeze-col { background: #fff0f0; }
+tr.sat td.freeze-col { background: #f0f4ff; }
+tr.total td.freeze-col { background: #e8eaf6; }
+tr td.freeze-col { background: var(--white); }
+tr:hover td.freeze-col { background: #f8f9fa; }
 
 /* ===== Inputs ===== */
 input, select {
@@ -201,8 +215,8 @@ select { text-align: left; }
       <table>
         <thead>
           <tr>
-            <th rowspan="2" style="min-width:52px">日付</th>
-            <th rowspan="2" style="min-width:32px">曜日</th>
+            <th rowspan="2" class="freeze-col" style="min-width:52px">日付</th>
+            <th rowspan="2" class="freeze-col" style="min-width:32px">曜日</th>
             <th colspan="3">売上</th>
             <th colspan="3">組数</th>
             <th colspan="3">客数</th>
@@ -413,8 +427,8 @@ function renderSales(){
     PAY_KEYS.forEach(k=> T[k]+=Number(r[k]||0));
 
     html+=`<tr class="${cls}">
-      <td class="center">${M}/${d}</td>
-      <td class="center">${DOW[w]}</td>
+      <td class="center freeze-col">${M}/${d}</td>
+      <td class="center freeze-col">${DOW[w]}</td>
       <td>${yenIn(r.budgetS,d,'budgetS')}</td>
       <td class="bold yen-cell">${yen(actS)}</td>
       <td class="${pctCls(actS,r.budgetS)}">${pct(actS,r.budgetS)}</td>
@@ -434,7 +448,7 @@ function renderSales(){
   const totalS = PAY_KEYS.reduce((s,k)=>s+T[k],0);
   const totalU = T.actC>0?Math.round(totalS/T.actC):'';
   html+=`<tr class="total">
-    <td class="center" colspan="2">合計</td>
+    <td class="center freeze-col" colspan="2" style="left:0">合計</td>
     <td>${yen(T.budgetS)}</td>
     <td class="bold yen-cell">${yen(totalS)}</td>
     <td class="${pctCls(totalS,T.budgetS)}">${pct(totalS,T.budgetS)}</td>
